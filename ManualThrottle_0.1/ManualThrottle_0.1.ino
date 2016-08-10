@@ -28,15 +28,20 @@ boolean GAS = 1;
 unsigned long DEBOUNCEG = 0;
 unsigned long LAST_DEBOUNCEG = 0;
 
-//boolean BRAKE = 1;
-volatile byte BRAKE = HIGH;
+boolean BRAKE = 1;
+//volatile byte BRAKE = HIGH;
 unsigned long DEBOUNCEB = 0;
 unsigned long LAST_DEBOUNCEB = 0;
 
-//boolean CLUTCH = 1;
-volatile byte CLUTCH = HIGH;
+boolean CLUTCH = 1;
+//volatile byte CLUTCH = HIGH;
 unsigned long DEBOUNCEC = 0;
 unsigned long LAST_DEBOUNCEC = 0;
+
+boolean RESUME = 1;
+//volatile byte RESUME = HIGH;
+unsigned long DEBOUNCER = 0;
+unsigned long LAST_DEBOUNCER = 0;
 
 // Analog Variables
 int PWM = 1000;
@@ -55,9 +60,11 @@ void setup()
   pinMode(3, INPUT);  // GAS as input
   //attachInterrupt(3, GAS_I, CHANGE);
   pinMode(4, INPUT);  // BRAKE as input
-  attachInterrupt(4, BRAKE_I, CHANGE);
+  //attachInterrupt(4, BRAKE_I, CHANGE);
   pinMode(5, INPUT);  // CLUTCH as input
-  attachInterrupt(5, CLUTCH_I, CHANGE);
+  //attachInterrupt(5, CLUTCH_I, CHANGE);
+  pinMode(10, INPUT);  // RESUME as input
+  //attachInterrupt(5, RESUME_I, CHANGE);
   
   CurieTimerOne.pwmStart(9, 51, 10000); // PWM on Pin 9 with 0-1023 duty cycle and 10000 usec period
 }
@@ -74,26 +81,20 @@ void loop()
     Serial.print("\t");
     Serial.println(PWM);
     TPOT = analogRead(A1);  // Read throttle pot value
-    PWM = map(TPOT, 0, 1023, 51, 102); // Map's 0-1023 value from throttle pot to the 1000us to 2000us 90 degree throw of servo
+    PWM = map(TPOT, 0, 1023, 51, 100); // Map's 0-1023 value from throttle pot to the 1000us to 2000us 90 degree throw of servo
     CurieTimerOne.pwmStart(9, PWM, 20000); // PWM on Pin 9 with 0-1023 duty cycle and 20000 usec (20ms) period
-
-    /*
-    if(digitalRead(4) == 0 || digitalRead(5) == 0)
-    {
-      CurieTimerOne.pwmStart(9, 51, 20000);
-      TPOTIO = !TPOTIO;
-    }
-    */
-    
-    if (!BRAKE)
+    if (digitalRead(4) == 1 || digitalRead(5) == 1)
     {
       CurieTimerOne.pwmStart(9, 51, 20000); // Essentially turn off Servo
-      TPOTIO = !TPOTIO; //Reset the throttle pot state to force it to be reset
-      Serial.print("Brake: \t");
-      Serial.print(BRAKE);
-      Serial.print("Clutch: \t");
-      Serial.print(CLUTCH);
+      while(!TPOTIO); //wait for throttle pot to turn off
     }
+    /*
+    if (BRAKE | CLUTCH)
+    {
+      CurieTimerOne.pwmStart(9, 51, 20000); // Essentially turn off Servo
+      while(!TPOTIO);
+    }
+    */
   }
 }
 
@@ -108,6 +109,8 @@ void TPOTIO_I()
     TPOTIO = !TPOTIO;
     LAST_DEBOUNCET = DEBOUNCET; // Set debounce time
   }
+  Serial.print("Throttle Pot IO: \t");
+  Serial.println(TPOTIO);
 }
 
 //-----------------------------------------------
@@ -116,11 +119,13 @@ void TPOTIO_I()
 void GAS_I()
 {
   DEBOUNCEG = millis();
-  if (DEBOUNCEG - LAST_DEBOUNCEG > 10) // Debounce of 250ms
+    if (DEBOUNCEG - LAST_DEBOUNCEG > 250) // Debounce of 10ms
   {
    GAS = !GAS;
     LAST_DEBOUNCEG = DEBOUNCEG; // Set debounce time
   }
+  Serial.print("Gas: \t");
+  Serial.println(GAS);
 }
 
 //-----------------------------------------------
@@ -130,11 +135,13 @@ void BRAKE_I()
 {
   BRAKE = !BRAKE;
   DEBOUNCEB = millis();
-  if (DEBOUNCEB - LAST_DEBOUNCEB > 10) // Debounce of 250ms
+  if (DEBOUNCEB - LAST_DEBOUNCEB > 250) // Debounce of 10ms
   {
     BRAKE = !BRAKE;
     LAST_DEBOUNCEB = DEBOUNCEB; // Set debounce time
   }
+  Serial.print("Brake: \t");
+  Serial.println(BRAKE);
 }
 
 //-----------------------------------------------
@@ -143,10 +150,27 @@ void BRAKE_I()
 void CLUTCH_I()
 {
   DEBOUNCEC = millis();
-  if (DEBOUNCEC - LAST_DEBOUNCEC > 10) // Debounce of 250ms
+  if (DEBOUNCEC - LAST_DEBOUNCEC > 250) // Debounce of 10ms
   {
     CLUTCH = !CLUTCH;
     LAST_DEBOUNCEC = DEBOUNCEC; // Set debounce time
   }
+  Serial.print("Clutch: \t");
+  Serial.println(CLUTCH);
+}
+
+//-----------------------------------------------
+// RESUME
+//-----------------------------------------------
+void RESUME_I()
+{
+  DEBOUNCER = millis();
+  if (DEBOUNCER - LAST_DEBOUNCER > 250) // Debounce of 10ms
+  {
+    RESUME = !RESUME;
+    LAST_DEBOUNCER = DEBOUNCER; // Set debounce time
+  }
+  Serial.print("Resume: \t");
+  Serial.println(RESUME);
 }
 
